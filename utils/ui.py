@@ -80,12 +80,13 @@ def apply_goes_theme():
             }}
 
             .goes-header {{
-                background: linear-gradient(135deg, {GOES_BLUE}, {GOES_DARK});
+                background: {GOES_BLUE};
                 color: white;
                 padding: 24px 28px;
                 border-radius: 18px;
                 margin-bottom: 24px;
-                box-shadow: 0 8px 24px rgba(17, 30, 96, 0.20);
+                border-left: 8px solid {GOES_GOLD};
+                box-shadow: 0 8px 24px rgba(17, 30, 96, 0.16);
             }}
 
             .goes-header h1 {{
@@ -154,6 +155,69 @@ def apply_goes_theme():
                 border-radius: 14px;
                 padding: 6px;
             }}
+
+        div[data-testid="stVerticalBlockBorderWrapper"],
+        div[data-testid="stForm"],
+        div[data-testid="stExpander"],
+        div[data-testid="stDataFrame"] {{
+            background-color: #ffffff !important;
+        }}
+
+        div[data-testid="stTextInput"] [data-baseweb="input"],
+        div[data-testid="stTextArea"] [data-baseweb="textarea"],
+        div[data-testid="stNumberInput"] [data-baseweb="input"],
+        div[data-testid="stSelectbox"] div[data-baseweb="select"],
+        div[data-testid="stMultiSelect"] div[data-baseweb="select"] {{
+            background-color: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 10px !important;
+            min-height: 44px !important;
+            color: {GOES_DARK} !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }}
+
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stTextArea"] textarea,
+        div[data-testid="stNumberInput"] input,
+        div[data-testid="stSelectbox"] input,
+        div[data-testid="stMultiSelect"] input {{
+            background-color: transparent !important;
+            color: {GOES_DARK} !important;
+            caret-color: {GOES_BLUE} !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }}
+
+        div[data-testid="stTextInput"] input::placeholder,
+        div[data-testid="stTextArea"] textarea::placeholder,
+        div[data-testid="stNumberInput"] input::placeholder {{
+            color: #94a3b8 !important;
+            opacity: 1 !important;
+        }}
+
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+        div[data-testid="stMultiSelect"] div[data-baseweb="select"] span {{
+            color: #64748b !important;
+        }}
+
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] [data-baseweb="icon"],
+        div[data-testid="stMultiSelect"] div[data-baseweb="select"] [data-baseweb="icon"] {{
+            color: {GOES_DARK} !important;
+            fill: {GOES_DARK} !important;
+        }}
+
+        div[data-testid="stNumberInput"] button {{
+            background-color: #f8fafc !important;
+            color: {GOES_DARK} !important;
+            border-color: #cbd5e1 !important;
+            box-shadow: none !important;
+        }}
+
+        div[data-testid="stNumberInput"] button svg {{
+            fill: {GOES_DARK} !important;
+            color: {GOES_DARK} !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True

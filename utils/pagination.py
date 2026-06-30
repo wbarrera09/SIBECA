@@ -7,13 +7,13 @@ def apply_pagination_styles():
     st.markdown(
         f"""
         <style>
-            div[class*="sibeca_pager_controls"] {{
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_controls"] {{
                 margin-top: 4px !important;
                 margin-bottom: 10px !important;
             }}
 
-            div[class*="sibeca_pager_prev"] button,
-            div[class*="sibeca_pager_next"] button {{
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_prev"] button,
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_next"] button {{
                 background: transparent !important;
                 border: none !important;
                 box-shadow: none !important;
@@ -32,25 +32,27 @@ def apply_pagination_styles():
                 margin: 0 !important;
             }}
 
-            div[class*="sibeca_pager_prev"] button:hover,
-            div[class*="sibeca_pager_next"] button:hover {{
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_prev"] button:hover,
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_next"] button:hover {{
                 background: #f1f5f9 !important;
                 color: {GOES_BLUE} !important;
                 border: none !important;
                 box-shadow: none !important;
             }}
 
-            div[class*="sibeca_pager_prev"] button:disabled,
-            div[class*="sibeca_pager_next"] button:disabled {{
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_prev"] button:disabled,
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_next"] button:disabled {{
                 background: transparent !important;
                 color: #cbd5e1 !important;
                 opacity: 1 !important;
+                border: none !important;
+                box-shadow: none !important;
             }}
 
-            div[class*="sibeca_pager_prev"] button p,
-            div[class*="sibeca_pager_next"] button p,
-            div[class*="sibeca_pager_prev"] button span,
-            div[class*="sibeca_pager_next"] button span {{
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_prev"] button p,
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_next"] button p,
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_prev"] button span,
+            div[data-testid="stAppViewContainer"] .block-container div[class*="sibeca_pager_next"] button span {{
                 color: inherit !important;
                 font-size: 1.35rem !important;
                 font-weight: 900 !important;

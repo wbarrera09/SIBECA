@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from xlsxwriter import color
 
 from database.connection import get_engine
 from utils.ui import apply_goes_theme, page_header, GOES_BLUE, GOES_GOLD, GOES_DARK
@@ -161,8 +162,15 @@ st.markdown(
         div[data-testid="stDataFrame"] {{
             border: 1px solid #e5e7eb;
             border-radius: 14px;
-            overflow: hidden;
+            overflow: visible !important;
             box-shadow: 0 4px 12px rgba(17, 30, 96, 0.06);
+            position: relative !important;
+        }}
+
+        div[data-testid="stDataFrame"] div[data-testid="stElementToolbar"] {{
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 9999 !important;
         }}
 
         div[data-testid="stDataFrame"] [role="columnheader"] {{
@@ -306,27 +314,30 @@ st.markdown(
             color: {GOES_DARK} !important;
         }}
 
-        div[data-baseweb="tag"] {{
+/
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
             background-color: {GOES_BLUE} !important;
             border: 1px solid {GOES_BLUE} !important;
             border-radius: 8px !important;
-            color: #ffffff !important;
-            max-width: 180px !important;
+            max-width: none !important;
+            width: auto !important;
+            min-width: fit-content !important;
             margin-top: 2px !important;
             margin-bottom: 2px !important;
             flex-shrink: 0 !important;
-        }}
-
-        div[data-baseweb="tag"] span {{
-            color: #ffffff !important;
-            opacity: 1 !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
             white-space: nowrap !important;
-            max-width: 145px !important;
         }}
 
-        div[data-baseweb="tag"] svg {{
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span {{
+            color: #ffffff !important;
+            max-width: none !important;
+            width: auto !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: nowrap !important;
+        }}
+
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] svg {{
             fill: #ffffff !important;
             color: #ffffff !important;
             flex-shrink: 0 !important;
@@ -391,6 +402,45 @@ st.markdown(
 
         .js-plotly-plot .plotly .modebar-btn:hover svg {{
             fill: {GOES_BLUE} !important;
+        }}
+
+                div[data-testid="stMultiSelect"] div[data-baseweb="tag"],
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
+            background-color: {GOES_BLUE} !important;
+            border: 1px solid {GOES_BLUE} !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            max-width: 100% !important;
+            width: auto !important;
+            min-width: 0 !important;
+            margin-top: 2px !important;
+            margin-bottom: 2px !important;
+            flex-shrink: 1 !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] span,
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span,
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] span[title],
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span[title] {{
+            color: #ffffff !important;
+            max-width: none !important;
+            width: auto !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            white-space: nowrap !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] svg,
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] svg {{
+            fill: #ffffff !important;
+            color: #ffffff !important;
+            flex-shrink: 0 !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {{
+            flex-wrap: wrap !important;
+            max-height: 150px !important;
+            overflow-y: auto !important;
         }}
         
     </style>
@@ -697,7 +747,7 @@ with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
         )
 
     with st.container(border=True):
-        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+        col_f1, col_f2, col_f3, col_f4 = st.columns([2.3, 2.1, 1.4, 1.1])
 
         with col_f1:
             selected_student = st.selectbox(
@@ -708,21 +758,7 @@ with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
                 key="filter_student"
             )
 
-            department_filter = st.multiselect(
-                "Departamento",
-                options=sorted(df["department"].unique().tolist()),
-                placeholder=EMPTY_PLACEHOLDER,
-                key="filter_department"
-            )
-
         with col_f2:
-            modality_filter = st.multiselect(
-                "Modalidad",
-                options=sorted(df["modality"].unique().tolist()),
-                placeholder=EMPTY_PLACEHOLDER,
-                key="filter_modality"
-            )
-
             career_filter = st.multiselect(
                 "Carrera",
                 options=sorted(df["career"].unique().tolist()),
@@ -731,13 +767,32 @@ with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
             )
 
         with col_f3:
+            department_filter = st.multiselect(
+                "Departamento",
+                options=sorted(df["department"].unique().tolist()),
+                placeholder=EMPTY_PLACEHOLDER,
+                key="filter_department"
+            )
+
+        with col_f4:
             risk_filter = st.multiselect(
-                "Nivel de riesgo",
+                "Riesgo",
                 options=["Alto", "Medio", "Bajo"],
                 placeholder=EMPTY_PLACEHOLDER,
                 key="filter_risk"
             )
 
+        col_f5, col_f6, col_f7, col_f8 = st.columns([1.4, 1.2, 1.5, 1.7])
+
+        with col_f5:
+            modality_filter = st.multiselect(
+                "Modalidad",
+                options=sorted(df["modality"].unique().tolist()),
+                placeholder=EMPTY_PLACEHOLDER,
+                key="filter_modality"
+            )
+
+        with col_f6:
             status_filter = st.multiselect(
                 "Estado",
                 options=sorted(df["status"].unique().tolist()),
@@ -745,7 +800,7 @@ with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
                 key="filter_status"
             )
 
-        with col_f4:
+        with col_f7:
             scholarship_filter = st.multiselect(
                 "Tipo de beca",
                 options=sorted(df["scholarship_type"].unique().tolist()),
@@ -753,6 +808,7 @@ with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
                 key="filter_scholarship"
             )
 
+        with col_f8:
             monitor_filter = st.multiselect(
                 "Monitor asignado",
                 options=sorted(df["assigned_monitor"].unique().tolist()),
@@ -760,6 +816,7 @@ with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
                 key="filter_monitor"
             )
 
+    with st.expander("Filtros avanzados", expanded=False):
         col_r1, col_r2 = st.columns(2)
 
         with col_r1:

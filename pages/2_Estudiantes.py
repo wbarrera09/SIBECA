@@ -270,8 +270,15 @@ st.markdown(
         div[data-testid="stDataFrame"] {{
             border: 1px solid #e5e7eb;
             border-radius: 14px;
-            overflow: hidden;
+            overflow: visible !important;
             box-shadow: 0 4px 12px rgba(17, 30, 96, 0.06);
+            position: relative !important;
+        }}
+
+        div[data-testid="stDataFrame"] div[data-testid="stElementToolbar"] {{
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 9999 !important;
         }}
 
         div[data-testid="stDataFrame"] [role="columnheader"] {{
@@ -512,13 +519,14 @@ st.markdown(
         }}
 
         div[data-testid="stButton"] button {{
-            min-height: 38px !important;
-            padding: 0.25rem 0.75rem !important;
+            min-height: 42px !important;
+            padding: 0.25rem 0.55rem !important;
             border-radius: 10px !important;
             background-color: {GOES_BLUE} !important;
             color: #ffffff !important;
             border: none !important;
-            font-weight: 800 !important;
+            margin-top: 10px;
+            margin-bottom: 10px;
         }}
 
         div[data-testid="stButton"] button:hover {{
@@ -621,6 +629,52 @@ st.markdown(
             color: #64748b;
             white-space: nowrap;
             line-height: 1;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"],
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
+            background-color: {GOES_BLUE} !important;
+            border: 1px solid {GOES_BLUE} !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            width: auto !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            overflow: hidden !important;
+            white-space: nowrap !important;
+            margin-top: 2px !important;
+            margin-bottom: 2px !important;
+            flex-shrink: 1 !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] span,
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span,
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] span[title],
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span[title] {{
+            color: #ffffff !important;
+            opacity: 1 !important;
+            display: block !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] svg,
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] svg {{
+            fill: #ffffff !important;
+            color: #ffffff !important;
+            flex-shrink: 0 !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {{
+            flex-wrap: wrap !important;
+            max-height: 130px !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
         }}
 
     </style>
@@ -823,6 +877,17 @@ def get_current_municipality(department, value):
 def clear_student_cache():
     st.cache_data.clear()
 
+def reset_student_filters():
+    st.session_state["students_filter_student"] = None
+    st.session_state["students_filter_department"] = []
+    st.session_state["students_filter_modality"] = []
+    st.session_state["students_filter_status"] = []
+    st.session_state["students_filter_scholarship"] = []
+    st.session_state["students_filter_career"] = []
+    st.session_state["students_filter_monitor"] = []
+    st.session_state["students_filter_support"] = (0, 100)
+    st.session_state["students_list_page_number"] = 1
+
 
 def create_student(payload):
     with engine.begin() as conn:
@@ -1013,10 +1078,22 @@ with tab1:
             render_kpi("Apoyo promedio", f"{avg_support:.1f}%", "Promedio de apoyo", "blue")
 
         with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
-            render_filter_title("Seleccione los filtros para consultar estudiantes")
+            col_filter_title, col_filter_button = st.columns([10, 1])
+
+            with col_filter_title:
+                render_filter_title("Seleccione los filtros para consultar estudiantes")
+
+            with col_filter_button:
+                st.button(
+                    "",
+                    icon=":material/filter_alt_off:",
+                    help="Limpiar filtros",
+                    use_container_width=True,
+                    on_click=reset_student_filters
+                )
 
             with st.container(border=True):
-                col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+                col_f1, col_f2, col_f3, col_f4 = st.columns([2.4, 2.0, 1.3, 1.1])
 
                 with col_f1:
                     selected_student = st.selectbox(
@@ -1028,19 +1105,19 @@ with tab1:
                     )
 
                 with col_f2:
+                    career_filter = st.multiselect(
+                        "Carrera",
+                        options=sorted(students_df["career"].dropna().unique().tolist()),
+                        placeholder=EMPTY_PLACEHOLDER,
+                        key="students_filter_career"
+                    )
+
+                with col_f3:
                     department_filter = st.multiselect(
                         "Departamento",
                         options=sorted(students_df["department"].dropna().unique().tolist()),
                         placeholder=EMPTY_PLACEHOLDER,
                         key="students_filter_department"
-                    )
-
-                with col_f3:
-                    modality_filter = st.multiselect(
-                        "Modalidad",
-                        options=sorted(students_df["modality"].dropna().unique().tolist()),
-                        placeholder=EMPTY_PLACEHOLDER,
-                        key="students_filter_modality"
                     )
 
                 with col_f4:
@@ -1051,9 +1128,17 @@ with tab1:
                         key="students_filter_status"
                     )
 
-                col_f5, col_f6, col_f7, col_f8 = st.columns(4)
+                col_f5, col_f6, col_f7 = st.columns([1.3, 1.4, 2.1])
 
                 with col_f5:
+                    modality_filter = st.multiselect(
+                        "Modalidad",
+                        options=sorted(students_df["modality"].dropna().unique().tolist()),
+                        placeholder=EMPTY_PLACEHOLDER,
+                        key="students_filter_modality"
+                    )
+
+                with col_f6:
                     scholarship_filter = st.multiselect(
                         "Tipo de beca",
                         options=sorted(students_df["scholarship_type"].dropna().unique().tolist()),
@@ -1061,32 +1146,23 @@ with tab1:
                         key="students_filter_scholarship"
                     )
 
-                with col_f6:
-                    career_filter = st.multiselect(
-                        "Carrera",
-                        options=sorted(students_df["career"].dropna().unique().tolist()),
-                        placeholder=EMPTY_PLACEHOLDER,
-                        key="students_filter_career"
-                    )
-
                 with col_f7:
                     monitor_filter = st.multiselect(
-                        "Monitor",
+                        "Monitor asignado",
                         options=sorted(students_df["assigned_monitor"].dropna().unique().tolist()),
                         placeholder=EMPTY_PLACEHOLDER,
                         key="students_filter_monitor"
                     )
 
-                with col_f8:
-                    support_range = st.slider(
-                        "Apoyo económico",
-                        min_value=0,
-                        max_value=100,
-                        value=(0, 100),
-                        step=5,
-                        key="students_filter_support"
-                    )
-
+            with st.expander("Filtros avanzados", expanded=False):
+                support_range = st.slider(
+                    "Apoyo económico",
+                    min_value=0,
+                    max_value=100,
+                    value=(0, 100),
+                    step=5,
+                    key="students_filter_support"
+                )
         filtered = students_df.copy()
 
         if selected_student:
@@ -1328,6 +1404,10 @@ with tab2:
 with tab3:
     render_section_title("Ficha y edición del estudiante")
 
+    if st.session_state.get('update_success', False):
+        st.success("Información del estudiante actualizada correctamente.")
+        st.session_state['update_success'] = False
+
     if students_df.empty:
         st.info("No hay estudiantes registrados.")
     else:
@@ -1559,6 +1639,7 @@ with tab3:
                             student["assigned_monitor"]
                         )
 
+                    # --- REEMPLAZAR DESDE AQUÍ ---
                     update_submitted = st.button(
                         "Actualizar estudiante",
                         use_container_width=True,
@@ -1596,5 +1677,14 @@ with tab3:
 
                             update_student(student["id"], payload)
                             clear_student_cache()
-                            st.success("Información del estudiante actualizada correctamente.")
+                            
+                            # Activamos el mensaje y recargamos al instante
+                            st.session_state["show_update_success"] = True
                             st.rerun()
+
+                                            # --- AGREGAR ESTO AQUÍ ---
+                if st.session_state.get("show_update_success", False):
+                    st.success("Información del estudiante actualizada correctamente.")
+                    st.session_state["show_update_success"] = False
+                # -------------------------
+                    # --- HASTA AQUÍ (FIN DEL ARCHIVO) ---

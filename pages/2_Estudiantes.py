@@ -1639,7 +1639,6 @@ with tab3:
                             student["assigned_monitor"]
                         )
 
-                    # --- REEMPLAZAR DESDE AQUÍ ---
                     update_submitted = st.button(
                         "Actualizar estudiante",
                         use_container_width=True,
@@ -1678,13 +1677,9 @@ with tab3:
                             update_student(student["id"], payload)
                             clear_student_cache()
                             
-                            # Activamos el mensaje y recargamos al instante
                             st.session_state["show_update_success"] = True
                             st.rerun()
 
-                                            # --- AGREGAR ESTO AQUÍ ---
                 if st.session_state.get("show_update_success", False):
                     st.success("Información del estudiante actualizada correctamente.")
                     st.session_state["show_update_success"] = False
-                # -------------------------
-                    # --- HASTA AQUÍ (FIN DEL ARCHIVO) ---

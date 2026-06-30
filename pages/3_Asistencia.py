@@ -336,9 +336,11 @@ st.markdown(
             min-height: 42px !important;
             max-height: 120px !important;
             overflow-y: auto !important;
+            overflow-x: hidden !important;
             align-items: flex-start !important;
             padding-top: 4px !important;
             padding-bottom: 4px !important;
+            flex-wrap: wrap !important;
         }}
 
         div[data-testid="stSelectbox"] div[data-baseweb="select"] input,
@@ -360,6 +362,45 @@ st.markdown(
             fill: {GOES_DARK} !important;
         }}
 
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"],
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
+            background-color: {GOES_BLUE} !important;
+            border: 1px solid {GOES_BLUE} !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            width: auto !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            overflow: hidden !important;
+            white-space: nowrap !important;
+            margin-top: 2px !important;
+            margin-bottom: 2px !important;
+            flex-shrink: 1 !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] span,
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span,
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] span[title],
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] span[title] {{
+            color: #ffffff !important;
+            opacity: 1 !important;
+            display: block !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+        }}
+
+        div[data-testid="stMultiSelect"] div[data-baseweb="tag"] svg,
+        div[data-testid="stMultiSelect"] span[data-baseweb="tag"] svg {{
+            fill: #ffffff !important;
+            color: #ffffff !important;
+            flex-shrink: 0 !important;
+        }}
+
         div[data-testid="stAppViewContainer"] .block-container div[data-testid="stButton"] button {{
             min-height: 38px !important;
             padding: 0.25rem 0.75rem !important;
@@ -377,6 +418,39 @@ st.markdown(
 
         div[data-testid="stAppViewContainer"] .block-container div[data-testid="stButton"] button span {{
             color: #ffffff !important;
+        }}
+
+        div[class*="st-key-attendance_clear_filters_button"] button {{
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 0.25rem 0.55rem !important;
+            border-radius: 10px !important;
+            background-color: {GOES_BLUE} !important;
+            color: #ffffff !important;
+            border: none !important;
+            box-shadow: none !important;
+            margin-top: 10px !important;
+            margin-bottom: 10px !important;
+            font-weight: 800 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }}
+
+        div[class*="st-key-attendance_clear_filters_button"] button:hover {{
+            background-color: {GOES_DARK} !important;
+            color: #ffffff !important;
+            border: none !important;
+            box-shadow: none !important;
+        }}
+
+        div[class*="st-key-attendance_clear_filters_button"] button span {{
+            color: #ffffff !important;
+        }}
+
+        div[class*="st-key-attendance_clear_filters_button"] button svg {{
+            color: #ffffff !important;
+            fill: #ffffff !important;
         }}
 
         div[data-testid="stFormSubmitButton"] button {{
@@ -578,6 +652,16 @@ def render_chart(container, fig):
     )
 
 
+def reset_attendance_filters():
+    st.session_state["attendance_summary_student"] = None
+    st.session_state["attendance_summary_status"] = []
+    st.session_state["attendance_summary_modality"] = []
+    st.session_state["attendance_summary_career"] = []
+    st.session_state["attendance_summary_department"] = []
+    st.session_state["attendance_summary_expected"] = []
+    st.session_state["attendance_summary_detail_page_number"] = 1
+
+
 students = load_students()
 modalities = load_modalities()
 
@@ -599,11 +683,10 @@ modality_options = {
     for row in modalities.itertuples()
 }
 
-tab1, tab2, tab3 = st.tabs(
+tab1, tab2 = st.tabs(
     [
         "Resumen",
-        "Registrar asistencia",
-        "Detalle"
+        "Registrar asistencia"
     ]
 )
 
@@ -615,333 +698,109 @@ with tab1:
     if df.empty:
         st.info("Todavía no hay registros de asistencia.")
     else:
-        summary = (
-            df.groupby(
+        student_filter_df = (
+            df[
                 [
                     "student_code",
-                    "full_name",
-                    "career"
+                    "full_name"
                 ]
-            )
-            .agg(
-                sesiones_esperadas=("expected_attendance", "sum"),
-                asistencias=("attendance_status", lambda x: (x == "Asistió").sum()),
-                faltas=("attendance_status", lambda x: (x == "Faltó").sum()),
-                llegadas_tarde=("attendance_status", lambda x: (x == "Llegó tarde").sum()),
-                justificadas=("attendance_status", lambda x: (x == "Justificado").sum())
-            )
-            .reset_index()
-        )
-
-        summary["asistencia_%"] = summary.apply(
-            lambda row: round((row["asistencias"] / row["sesiones_esperadas"]) * 100, 2)
-            if row["sesiones_esperadas"] > 0 else 0,
-            axis=1
-        )
-
-        total_attendance_records = len(df)
-        avg_attendance = summary["asistencia_%"].mean()
-        low_attendance = len(summary[summary["asistencia_%"] < 75])
-        total_absences = int(summary["faltas"].sum())
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            render_kpi(
-                "Registros",
-                f"{total_attendance_records:,}",
-                "Registros de asistencia",
-                "blue"
-            )
-
-        with col2:
-            render_kpi(
-                "Asistencia promedio",
-                f"{avg_attendance:.1f}%",
-                "Promedio general",
-                "gold"
-            )
-
-        with col3:
-            render_kpi(
-                "Bajo 75%",
-                f"{low_attendance:,}",
-                "Estudiantes con baja asistencia",
-                "red"
-            )
-
-        with col4:
-            render_kpi(
-                "Faltas",
-                f"{total_absences:,}",
-                "Faltas registradas",
-                "gray"
-            )
-
-        col_a, col_b = st.columns(2)
-
-        status_count = df["attendance_status"].value_counts().reset_index()
-        status_count.columns = ["Estado", "Cantidad"]
-
-        fig_status = px.bar(
-            status_count,
-            x="Estado",
-            y="Cantidad",
-            title="Distribución de estados de asistencia",
-            color="Estado",
-            color_discrete_map=ATTENDANCE_COLOR_MAP,
-            text="Cantidad"
-        )
-
-        fig_status = format_chart(fig_status, show_legend=False)
-        fig_status.update_layout(
-            xaxis_title="Estado",
-            yaxis_title="Cantidad"
-        )
-        fig_status.update_traces(textposition="outside")
-        render_chart(col_a, fig_status)
-
-        lowest_attendance = (
-            summary
-            .sort_values("asistencia_%", ascending=True)
-            .head(10)
-        )
-
-        fig_lowest = px.bar(
-            lowest_attendance,
-            x="asistencia_%",
-            y="full_name",
-            orientation="h",
-            title="Estudiantes con menor asistencia",
-            color_discrete_sequence=[GOES_BLUE],
-            text="asistencia_%"
-        )
-
-        fig_lowest = format_chart(fig_lowest, show_legend=False)
-        fig_lowest.update_layout(
-            xaxis_title="Asistencia",
-            yaxis_title="Estudiante"
-        )
-        fig_lowest.update_traces(
-            texttemplate="%{text:.1f}%",
-            textposition="outside"
-        )
-        render_chart(col_b, fig_lowest)
-
-        render_section_title("Ranking de asistencia")
-
-        ranking_view = summary.sort_values(
-            by=[
-                "asistencia_%",
-                "faltas"
-            ],
-            ascending=[
-                True,
-                False
             ]
-        ).copy()
-
-        ranking_view = ranking_view.rename(
-            columns={
-                "student_code": "Código",
-                "full_name": "Estudiante",
-                "career": "Carrera",
-                "sesiones_esperadas": "Sesiones esperadas",
-                "asistencias": "Asistencias",
-                "faltas": "Faltas",
-                "llegadas_tarde": "Llegadas tarde",
-                "justificadas": "Justificadas",
-                "asistencia_%": "Asistencia"
-            }
+            .drop_duplicates()
+            .copy()
         )
 
-        total_records = len(ranking_view)
-
-        page_size, page_number, start_row, end_row = render_pagination(
-            total_records=total_records,
-            key_prefix="attendance_summary",
-            label="estudiantes"
+        student_filter_df["student_selector"] = (
+            student_filter_df["student_code"]
+            + " - "
+            + student_filter_df["full_name"]
         )
 
-        paginated_ranking = ranking_view.iloc[start_row:end_row]
-
-        st.dataframe(
-            paginated_ranking,
-            use_container_width=True,
-            hide_index=True,
-            height=420,
-            column_config={
-                "Código": st.column_config.TextColumn("Código", width="small"),
-                "Estudiante": st.column_config.TextColumn("Estudiante", width="medium"),
-                "Carrera": st.column_config.TextColumn("Carrera", width="medium"),
-                "Sesiones esperadas": st.column_config.NumberColumn("Sesiones esperadas", width="small"),
-                "Asistencias": st.column_config.NumberColumn("Asistencias", width="small"),
-                "Faltas": st.column_config.NumberColumn("Faltas", width="small"),
-                "Llegadas tarde": st.column_config.NumberColumn("Llegadas tarde", width="small"),
-                "Justificadas": st.column_config.NumberColumn("Justificadas", width="small"),
-                "Asistencia": st.column_config.ProgressColumn(
-                    "Asistencia",
-                    min_value=0,
-                    max_value=100,
-                    format="%.1f%%",
-                    width="small"
-                )
-            }
+        student_filter_options = (
+            student_filter_df
+            .sort_values("student_selector")["student_selector"]
+            .tolist()
         )
 
-with tab2:
-    render_section_title("Registrar asistencia")
-
-    with st.container(border=True):
-        render_filter_title("Datos de la sesión")
-
-        with st.form("attendance_form"):
-            col1, col2 = st.columns(2)
-
-            with col1:
-                selected_student = st.selectbox(
-                    "Estudiante",
-                    options=list(student_options.keys()),
-                    index=None,
-                    placeholder=EMPTY_PLACEHOLDER,
-                    key="attendance_student"
-                )
-
-                session_date = st.date_input(
-                    "Fecha de sesión",
-                    value=date.today(),
-                    key="attendance_session_date"
-                )
-
-                expected_attendance = st.checkbox(
-                    "Asistencia esperada",
-                    value=True,
-                    key="attendance_expected"
-                )
-
-            with col2:
-                attendance_status = st.selectbox(
-                    "Estado de asistencia",
-                    options=[
-                        "Asistió",
-                        "Faltó",
-                        "Llegó tarde",
-                        "Justificado",
-                        "No aplica"
-                    ],
-                    index=None,
-                    placeholder=EMPTY_PLACEHOLDER,
-                    key="attendance_status"
-                )
-
-                modality_name = st.selectbox(
-                    "Modalidad de la sesión",
-                    options=list(modality_options.keys()),
-                    index=None,
-                    placeholder=EMPTY_PLACEHOLDER,
-                    key="attendance_modality"
-                )
-
-                observation = st.text_area(
-                    "Observación",
-                    key="attendance_observation"
-                )
-
-            submitted = st.form_submit_button(
-                "Guardar asistencia",
-                use_container_width=True
-            )
-
-            if submitted:
-                if not selected_student:
-                    st.error("Debes seleccionar un estudiante.")
-                elif not attendance_status:
-                    st.error("Debes seleccionar el estado de asistencia.")
-                elif not modality_name:
-                    st.error("Debes seleccionar la modalidad de la sesión.")
-                else:
-                    with engine.begin() as conn:
-                        conn.execute(
-                            text(
-                                """
-                                INSERT INTO attendance_records (
-                                    student_id,
-                                    session_date,
-                                    expected_attendance,
-                                    attendance_status,
-                                    modality_id,
-                                    observation
-                                )
-                                VALUES (
-                                    :student_id,
-                                    :session_date,
-                                    :expected_attendance,
-                                    :attendance_status,
-                                    :modality_id,
-                                    :observation
-                                )
-                                """
-                            ),
-                            {
-                                "student_id": student_options[selected_student],
-                                "session_date": session_date,
-                                "expected_attendance": expected_attendance,
-                                "attendance_status": attendance_status,
-                                "modality_id": modality_options[modality_name],
-                                "observation": observation.strip()
-                            }
-                        )
-
-                    st.cache_data.clear()
-                    st.success("Asistencia registrada correctamente.")
-
-with tab3:
-    render_section_title("Detalle de asistencia")
-
-    df = load_attendance()
-
-    if df.empty:
-        st.info("No hay registros para mostrar.")
-    else:
         with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
-            render_filter_title("Seleccione los filtros para consultar registros")
+            col_filter_title, col_filter_button = st.columns([10, 1])
+
+            with col_filter_title:
+                render_filter_title("Seleccione los filtros para consultar asistencia")
+
+            with col_filter_button:
+                st.button(
+                    "",
+                    icon=":material/filter_alt_off:",
+                    help="Limpiar filtros",
+                    use_container_width=True,
+                    on_click=reset_attendance_filters,
+                    key="attendance_clear_filters_button"
+                )
 
             with st.container(border=True):
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3 = st.columns([2.4, 1.3, 1.3])
 
                 with col1:
+                    selected_student_filter = st.selectbox(
+                        "Buscar estudiante",
+                        options=student_filter_options,
+                        index=None,
+                        placeholder=EMPTY_PLACEHOLDER,
+                        key="attendance_summary_student"
+                    )
+
+                with col2:
                     status_filter = st.multiselect(
                         "Estado",
                         options=sorted(df["attendance_status"].dropna().unique().tolist()),
                         placeholder=EMPTY_PLACEHOLDER,
-                        key="attendance_detail_status"
+                        key="attendance_summary_status"
                     )
 
-                with col2:
+                with col3:
                     modality_filter = st.multiselect(
                         "Modalidad",
                         options=sorted(df["modality"].dropna().unique().tolist()),
                         placeholder=EMPTY_PLACEHOLDER,
-                        key="attendance_detail_modality"
+                        key="attendance_summary_modality"
                     )
 
-                with col3:
+                col4, col5, col6 = st.columns([2.0, 1.4, 1.2])
+
+                with col4:
                     career_filter = st.multiselect(
                         "Carrera",
                         options=sorted(df["career"].dropna().unique().tolist()),
                         placeholder=EMPTY_PLACEHOLDER,
-                        key="attendance_detail_career"
+                        key="attendance_summary_career"
                     )
 
-                with col4:
+                with col5:
                     department_filter = st.multiselect(
                         "Departamento",
                         options=sorted(df["department"].dropna().unique().tolist()),
                         placeholder=EMPTY_PLACEHOLDER,
-                        key="attendance_detail_department"
+                        key="attendance_summary_department"
+                    )
+
+                with col6:
+                    expected_filter = st.multiselect(
+                        "Esperada",
+                        options=[
+                            "Sí",
+                            "No"
+                        ],
+                        placeholder=EMPTY_PLACEHOLDER,
+                        key="attendance_summary_expected"
                     )
 
         filtered = df.copy()
+
+        if selected_student_filter:
+            selected_student_code = selected_student_filter.split(" - ")[0]
+            filtered = filtered[
+                filtered["student_code"] == selected_student_code
+            ]
 
         if status_filter:
             filtered = filtered[
@@ -963,66 +822,317 @@ with tab3:
                 filtered["department"].isin(department_filter)
             ]
 
+        if expected_filter:
+            expected_values = [
+                True if value == "Sí" else False
+                for value in expected_filter
+            ]
+
+            filtered = filtered[
+                filtered["expected_attendance"].isin(expected_values)
+            ]
+
         st.caption(f"Mostrando {len(filtered):,} de {len(df):,} registros.")
 
-        detail_view = filtered[
-            [
-                "session_date",
-                "student_code",
-                "full_name",
-                "department",
-                "career",
-                "modality",
-                "expected_attendance",
-                "attendance_status",
-                "observation"
-            ]
-        ].copy()
+        if filtered.empty:
+            st.warning("No hay registros que coincidan con los filtros seleccionados.")
+        else:
+            summary = (
+                filtered.groupby(
+                    [
+                        "student_code",
+                        "full_name",
+                        "career"
+                    ]
+                )
+                .agg(
+                    sesiones_esperadas=("expected_attendance", "sum"),
+                    asistencias=("attendance_status", lambda x: (x == "Asistió").sum()),
+                    faltas=("attendance_status", lambda x: (x == "Faltó").sum()),
+                    llegadas_tarde=("attendance_status", lambda x: (x == "Llegó tarde").sum()),
+                    justificadas=("attendance_status", lambda x: (x == "Justificado").sum())
+                )
+                .reset_index()
+            )
 
-        detail_view["session_date"] = detail_view["session_date"].dt.strftime("%Y-%m-%d")
+            summary["asistencia_%"] = summary.apply(
+                lambda row: round((row["asistencias"] / row["sesiones_esperadas"]) * 100, 2)
+                if row["sesiones_esperadas"] > 0 else 0,
+                axis=1
+            )
 
-        detail_view["expected_attendance"] = detail_view["expected_attendance"].apply(
-            lambda value: "Sí" if bool(value) else "No"
-        )
+            valid_summary = summary[
+                summary["sesiones_esperadas"] > 0
+            ].copy()
 
-        detail_view = detail_view.rename(
-            columns={
-                "session_date": "Fecha",
-                "student_code": "Código",
-                "full_name": "Estudiante",
-                "department": "Departamento",
-                "career": "Carrera",
-                "modality": "Modalidad",
-                "expected_attendance": "Esperada",
-                "attendance_status": "Estado",
-                "observation": "Observación"
-            }
-        )
+            total_attendance_records = len(filtered)
 
-        total_records = len(detail_view)
+            if valid_summary.empty:
+                avg_attendance = 0
+                low_attendance = 0
+            else:
+                avg_attendance = valid_summary["asistencia_%"].mean()
+                low_attendance = len(
+                    valid_summary[
+                        valid_summary["asistencia_%"] < 75
+                    ]
+                )
 
-        page_size, page_number, start_row, end_row = render_pagination(
-            total_records=total_records,
-            key_prefix="attendance_detail",
-            label="registros"
-        )
+            total_absences = int(summary["faltas"].sum())
 
-        paginated_detail = detail_view.iloc[start_row:end_row]
+            col1, col2, col3, col4 = st.columns(4)
 
-        st.dataframe(
-            paginated_detail,
+            with col1:
+                render_kpi(
+                    "Registros",
+                    f"{total_attendance_records:,}",
+                    "Registros filtrados",
+                    "blue"
+                )
+
+            with col2:
+                render_kpi(
+                    "Asistencia promedio",
+                    f"{avg_attendance:.1f}%",
+                    "Promedio general",
+                    "gold"
+                )
+
+            with col3:
+                render_kpi(
+                    "Bajo 75%",
+                    f"{low_attendance:,}",
+                    "Estudiantes con baja asistencia",
+                    "red"
+                )
+
+            with col4:
+                render_kpi(
+                    "Faltas",
+                    f"{total_absences:,}",
+                    "Faltas registradas",
+                    "gray"
+                )
+
+            col_a, col_b = st.columns(2)
+
+            status_count = filtered["attendance_status"].value_counts().reset_index()
+            status_count.columns = ["Estado", "Cantidad"]
+
+            fig_status = px.bar(
+                status_count,
+                x="Estado",
+                y="Cantidad",
+                title="Distribución de estados de asistencia",
+                color="Estado",
+                color_discrete_map=ATTENDANCE_COLOR_MAP,
+                text="Cantidad"
+            )
+
+            fig_status = format_chart(fig_status, show_legend=False)
+            fig_status.update_layout(
+                xaxis_title="Estado",
+                yaxis_title="Cantidad"
+            )
+            fig_status.update_traces(textposition="outside")
+            render_chart(col_a, fig_status)
+
+            lowest_attendance = (
+                valid_summary
+                .sort_values("asistencia_%", ascending=True)
+                .head(10)
+            )
+
+            if lowest_attendance.empty:
+                col_b.info("No hay sesiones esperadas para calcular menor asistencia.")
+            else:
+                fig_lowest = px.bar(
+                    lowest_attendance,
+                    x="asistencia_%",
+                    y="full_name",
+                    orientation="h",
+                    title="Estudiantes con menor asistencia",
+                    color_discrete_sequence=[GOES_BLUE],
+                    text="asistencia_%"
+                )
+
+                fig_lowest = format_chart(fig_lowest, show_legend=False)
+                fig_lowest.update_layout(
+                    xaxis_title="Asistencia",
+                    yaxis_title="Estudiante"
+                )
+                fig_lowest.update_traces(
+                    texttemplate="%{text:.1f}%",
+                    textposition="outside"
+                )
+                render_chart(col_b, fig_lowest)
+
+            render_section_title("Registros de asistencia")
+
+            detail_view = filtered[
+                [
+                    "session_date",
+                    "student_code",
+                    "full_name",
+                    "department",
+                    "career",
+                    "modality",
+                    "expected_attendance",
+                    "attendance_status",
+                    "observation"
+                ]
+            ].copy()
+
+            detail_view["session_date"] = detail_view["session_date"].dt.strftime("%Y-%m-%d")
+
+            detail_view["expected_attendance"] = detail_view["expected_attendance"].apply(
+                lambda value: "Sí" if bool(value) else "No"
+            )
+
+            detail_view = detail_view.rename(
+                columns={
+                    "session_date": "Fecha",
+                    "student_code": "Código",
+                    "full_name": "Estudiante",
+                    "department": "Departamento",
+                    "career": "Carrera",
+                    "modality": "Modalidad",
+                    "expected_attendance": "Esperada",
+                    "attendance_status": "Estado",
+                    "observation": "Observación"
+                }
+            )
+
+            total_records = len(detail_view)
+
+            page_size, page_number, start_row, end_row = render_pagination(
+                total_records=total_records,
+                key_prefix="attendance_summary_detail",
+                label="registros"
+            )
+
+            paginated_detail = detail_view.iloc[start_row:end_row]
+
+            st.dataframe(
+                paginated_detail,
+                use_container_width=True,
+                hide_index=True,
+                height=460,
+                column_config={
+                    "Fecha": st.column_config.TextColumn("Fecha", width="small"),
+                    "Código": st.column_config.TextColumn("Código", width="small"),
+                    "Estudiante": st.column_config.TextColumn("Estudiante", width="medium"),
+                    "Departamento": st.column_config.TextColumn("Departamento", width="small"),
+                    "Carrera": st.column_config.TextColumn("Carrera", width="medium"),
+                    "Modalidad": st.column_config.TextColumn("Modalidad", width="small"),
+                    "Esperada": st.column_config.TextColumn("Esperada", width="small"),
+                    "Estado": st.column_config.TextColumn("Estado", width="small"),
+                    "Observación": st.column_config.TextColumn("Observación", width="large")
+                }
+            )
+
+with tab2:
+    render_section_title("Registrar asistencia")
+
+    with st.container(border=True):
+        render_filter_title("Datos de la sesión")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            selected_student = st.selectbox(
+                "Estudiante",
+                options=list(student_options.keys()),
+                index=None,
+                placeholder=EMPTY_PLACEHOLDER,
+                key="attendance_student"
+            )
+
+            session_date = st.date_input(
+                "Fecha de sesión",
+                value=date.today(),
+                key="attendance_session_date"
+            )
+
+            expected_attendance = st.checkbox(
+                "Asistencia esperada",
+                value=True,
+                key="attendance_expected"
+            )
+
+        with col2:
+            attendance_status = st.selectbox(
+                "Estado de asistencia",
+                options=[
+                    "Asistió",
+                    "Faltó",
+                    "Llegó tarde",
+                    "Justificado",
+                    "No aplica"
+                ],
+                index=None,
+                placeholder=EMPTY_PLACEHOLDER,
+                key="attendance_status"
+            )
+
+            modality_name = st.selectbox(
+                "Modalidad de la sesión",
+                options=list(modality_options.keys()),
+                index=None,
+                placeholder=EMPTY_PLACEHOLDER,
+                key="attendance_modality"
+            )
+
+            observation = st.text_area(
+                "Observación",
+                key="attendance_observation"
+            )
+
+        submitted = st.button(
+            "Guardar asistencia",
             use_container_width=True,
-            hide_index=True,
-            height=460,
-            column_config={
-                "Fecha": st.column_config.TextColumn("Fecha", width="small"),
-                "Código": st.column_config.TextColumn("Código", width="small"),
-                "Estudiante": st.column_config.TextColumn("Estudiante", width="medium"),
-                "Departamento": st.column_config.TextColumn("Departamento", width="small"),
-                "Carrera": st.column_config.TextColumn("Carrera", width="medium"),
-                "Modalidad": st.column_config.TextColumn("Modalidad", width="small"),
-                "Esperada": st.column_config.TextColumn("Esperada", width="small"),
-                "Estado": st.column_config.TextColumn("Estado", width="small"),
-                "Observación": st.column_config.TextColumn("Observación", width="large")
-            }
+            key="attendance_submit"
         )
+
+        if submitted:
+            if not selected_student:
+                st.error("Debes seleccionar un estudiante.")
+            elif not attendance_status:
+                st.error("Debes seleccionar el estado de asistencia.")
+            elif not modality_name:
+                st.error("Debes seleccionar la modalidad de la sesión.")
+            else:
+                with engine.begin() as conn:
+                    conn.execute(
+                        text(
+                            """
+                            INSERT INTO attendance_records (
+                                student_id,
+                                session_date,
+                                expected_attendance,
+                                attendance_status,
+                                modality_id,
+                                observation
+                            )
+                            VALUES (
+                                :student_id,
+                                :session_date,
+                                :expected_attendance,
+                                :attendance_status,
+                                :modality_id,
+                                :observation
+                            )
+                            """
+                        ),
+                        {
+                            "student_id": student_options[selected_student],
+                            "session_date": session_date,
+                            "expected_attendance": expected_attendance,
+                            "attendance_status": attendance_status,
+                            "modality_id": modality_options[modality_name],
+                            "observation": observation.strip()
+                        }
+                    )
+
+                st.cache_data.clear()
+                st.success("Asistencia registrada correctamente.")

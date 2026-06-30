@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from xlsxwriter import color
 
 from database.connection import get_engine
 from utils.ui import apply_goes_theme, page_header, GOES_BLUE, GOES_GOLD, GOES_DARK
@@ -54,7 +53,7 @@ def reset_filters():
     st.session_state["filter_monitor"] = []
     st.session_state["filter_attendance"] = (0.0, 100.0)
     st.session_state["filter_grade"] = (0.0, 10.0)
-    st.session_state["students_page_number"] = 1
+    st.session_state["dashboard_students_page_number"] = 1
 
 
 st.markdown(
@@ -314,7 +313,6 @@ st.markdown(
             color: {GOES_DARK} !important;
         }}
 
-/
         div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {{
             background-color: {GOES_BLUE} !important;
             border: 1px solid {GOES_BLUE} !important;

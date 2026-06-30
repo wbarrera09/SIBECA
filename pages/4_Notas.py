@@ -35,14 +35,15 @@ ACADEMIC_STATUS_COLOR_MAP = {
 }
 
 def reset_grades_filters():
+    st.session_state["grades_detail_student"] = None
     st.session_state["grades_detail_period"] = []
     st.session_state["grades_detail_status"] = []
     st.session_state["grades_detail_department"] = []
     st.session_state["grades_detail_career"] = []
     st.session_state["grades_detail_subject"] = []
-    st.session_state["notas_page_number"] = 1 
+    st.session_state["grades_detail_page_number"] = 1
 
-
+    
 st.markdown(
     f"""
     <style>
@@ -393,14 +394,15 @@ st.markdown(
             flex-shrink: 0 !important;
         }}
 
-        div[data-testid="stAppViewContainer"] .block-container div[data-testid="stButton"] button {{
-            min-height: 38px !important;
-            padding: 0.25rem 0.75rem !important;
+        div[data-testid="stButton"] button {{
+            min-height: 42px !important;
+            padding: 0.25rem 0.55rem !important;
             border-radius: 10px !important;
             background-color: {GOES_BLUE} !important;
             color: #ffffff !important;
             border: none !important;
-            font-weight: 800 !important;
+            margin-top: 10px;
+            margin-bottom: 10px;
         }}
 
         div[data-testid="stAppViewContainer"] .block-container div[data-testid="stButton"] button:hover {{
@@ -1057,13 +1059,58 @@ with tab3:
     if df.empty:
         st.info("No hay notas para mostrar.")
     else:
+        student_filter_df = (
+            df[
+                [
+                    "student_code",
+                    "full_name"
+                ]
+            ]
+            .drop_duplicates()
+            .copy()
+        )
+
+        student_filter_df["student_selector"] = (
+            student_filter_df["student_code"]
+            + " - "
+            + student_filter_df["full_name"]
+        )
+
+        student_filter_options = (
+            student_filter_df
+            .sort_values("student_selector")["student_selector"]
+            .tolist()
+        )
+
         with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
-            render_filter_title("Seleccione los filtros para consultar notas")
+            col_filter_title, col_filter_button = st.columns([10, 1])
+
+            with col_filter_title:
+                render_filter_title("Seleccione los filtros para consultar notas")
+
+            with col_filter_button:
+                st.button(
+                    "",
+                    icon=":material/filter_alt_off:",
+                    help="Limpiar filtros",
+                    use_container_width=True,
+                    on_click=reset_grades_filters,
+                    key="grades_clear_filters_button"
+                )
 
             with st.container(border=True):
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3 = st.columns([2.4, 1.3, 1.3])
 
                 with col1:
+                    selected_student_filter = st.selectbox(
+                        "Buscar estudiante",
+                        options=student_filter_options,
+                        index=None,
+                        placeholder=EMPTY_PLACEHOLDER,
+                        key="grades_detail_student"
+                    )
+
+                with col2:
                     period_filter = st.multiselect(
                         "Periodo",
                         options=sorted(df["period"].dropna().unique().tolist()),
@@ -1071,7 +1118,7 @@ with tab3:
                         key="grades_detail_period"
                     )
 
-                with col2:
+                with col3:
                     status_filter = st.multiselect(
                         "Estado académico",
                         options=sorted(df["academic_status"].dropna().unique().tolist()),
@@ -1079,15 +1126,7 @@ with tab3:
                         key="grades_detail_status"
                     )
 
-                with col3:
-                    department_filter = st.multiselect(
-                        "Departamento",
-                        options=sorted(df["department"].dropna().unique().tolist()),
-                        placeholder=EMPTY_PLACEHOLDER,
-                        key="grades_detail_department"
-                    )
-
-                col4, col5 = st.columns([1.5, 1.3])
+                col4, col5, col6 = st.columns([2.0, 1.7, 1.3])
 
                 with col4:
                     career_filter = st.multiselect(
@@ -1105,7 +1144,21 @@ with tab3:
                         key="grades_detail_subject"
                     )
 
+                with col6:
+                    department_filter = st.multiselect(
+                        "Departamento",
+                        options=sorted(df["department"].dropna().unique().tolist()),
+                        placeholder=EMPTY_PLACEHOLDER,
+                        key="grades_detail_department"
+                    )
+
         filtered = df.copy()
+
+        if selected_student_filter:
+            selected_student_code = selected_student_filter.split(" - ")[0]
+            filtered = filtered[
+                filtered["student_code"] == selected_student_code
+            ]
 
         if period_filter:
             filtered = filtered[

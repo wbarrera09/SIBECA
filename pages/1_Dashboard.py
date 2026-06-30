@@ -729,7 +729,7 @@ student_lookup["student_selector"] = (
 student_lookup = student_lookup.sort_values("student_selector")
 student_options = student_lookup["student_selector"].tolist()
 
-with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
+with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=False):
     col_filter_title, col_filter_button = st.columns([10, 1])
 
     with col_filter_title:

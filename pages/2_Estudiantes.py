@@ -1077,7 +1077,7 @@ with tab1:
         with col_kpi_4:
             render_kpi("Apoyo promedio", f"{avg_support:.1f}%", "Promedio de apoyo", "blue")
 
-        with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=True):
+        with st.expander("Mostrar / ocultar filtros de búsqueda", expanded=False):
             col_filter_title, col_filter_button = st.columns([10, 1])
 
             with col_filter_title:
